@@ -11,6 +11,7 @@ from resources import ping_resource
 from resources import test_resource
 from resources import oceanus_resource
 from resources import plc_resource
+from resources import dlg_resource
 
 from container import Container
 
@@ -38,6 +39,7 @@ def create_app(gunicorn: bool = False):
     api.add_resource( test_resource.TestResource, '/apicomms/test')
     api.add_resource( oceanus_resource.OceanusResource, '/apioceanus')
     api.add_resource( plc_resource.PlcResource, '/apiplc')
+    api.add_resource( dlg_resource.DlgResource, '/apidlg')
    
     return app
 

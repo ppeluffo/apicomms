@@ -147,7 +147,7 @@ class PlcDataFrameUsecase:
         self.logger.debug("")
         
         # 1) Le pido al repositorio que me de la configuracion
-        d_rsp = self.repo.leer_configuracion_plc(id)
+        d_rsp = self.repo.leer_configuracion(id)
         assert isinstance(d_rsp, dict)
         #self.logger.debug(f"id={id}, d_rsp={d_rsp}")
         

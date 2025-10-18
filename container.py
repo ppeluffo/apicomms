@@ -5,6 +5,7 @@ from dependency_injector import containers, providers
 from servicios.ping_service import PingService
 from servicios.oceanus_service import OceanusService
 from servicios.plc_service import PlcService
+from servicios.dlg_service import DlgService
 
 from repositorios.repodatos import RepoDatos
 
@@ -22,7 +23,7 @@ class Container(containers.DeclarativeContainer):
                  "resources.test_resource",
                  "resources.oceanus_resource",
                  "resources.plc_resource",
-
+                 "resources.dlg_resource",
                  ]
     )
     
@@ -40,6 +41,7 @@ class Container(containers.DeclarativeContainer):
     ping_service = providers.Factory(PingService, repositorio=repo, logger=logger)
     oceanus_service = providers.Factory(OceanusService, repositorio=repo, logger=logger)
     plc_service = providers.Factory(PlcService, repositorio=repo, logger=logger)
+    dlg_service = providers.Factory(DlgService, repositorio=repo, logger=logger)
     
 
 

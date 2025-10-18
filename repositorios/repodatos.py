@@ -43,7 +43,7 @@ class RepoDatos:
         tipo='PLC'
         return self.ds_apiredis.put_dataline(id=id, tipo=tipo, jparams=jparams)
 
-    def leer_configuracion_plc(self, id=None):
+    def leer_configuracion(self, id=None):
         """
         Le pide la configuracion a REDIS.
         Si no existe la pide a PGSQL y si este la devuelve, actualiza REDIS
@@ -98,4 +98,61 @@ class RepoDatos:
 
         return self.ds_apiredis.delete_ordenesplc(unit=unit)
     
+    def get_id_from_uid(self, uid=None):
+        """.
+        """
+        self.logger.debug("")
+
+        # 1. Le pregunto a Redis por uid->id
+        d_rsp = self.ds_apiredis.get_uid2id(uid)
+        assert isinstance(d_rsp, dict)
+
+        status_code = d_rsp.get('status_code', 0)
+        if status_code == 200:
+            return d_rsp
+        
+        # 2. No esta en Redis: pregunto a SQL
+        d_rsp = self.ds_apidatos.get_uid2id(uid)
+        assert isinstance(d_rsp, dict)
+
+        status_code = d_rsp.get('status_code', 0)
+        if status_code == 200:
+            # Actualizo la redis
+            id = d_rsp.get('id','')
+            _ = self.ds_apiredis.update_uid2id(uid, id)
+            return d_rsp
+        
+        # No esta en Redis ni en SQL: Error.
+        d_rsp = { 'status_code': 400 }
+        return d_rsp
+    
+    def update_uid2id( self, id=None, uid=None):
+        """
+        Leo el uidid de redis. Si coincide salgo.
+        Si no actualizo en redis y en pgsql
+        """
+        self.logger.debug("")  
+
+        d_rsp = self.get_id_from_uid(uid)
+        if d_rsp.get('status_code',0 ) != 200:
+            # No esta.
+            _ = self.ds_apiredis.set_uid2id(uid=uid, id=id)
+            _ = self.ds_apidatos.set_uid2id(uid=uid, id=id)
+        d_rsp = {'status_code':200}
+        return d_rsp
+    
+    def update_commsparameters( self, d_conf=None):
+        """
+        """
+        self.logger.debug("")     
+
+        imei = d_conf.get('IMEI',None)
+        iccid = d_conf.get('ICCID',None)
+        type = d_conf.get('TYPE',None)
+        ver = d_conf.get('VER',None)
+
+        #print(f'DEBUG d_args={d_args}')
+        #_ = update_comms_conf( self.d_args, {'DLGID':dlgid, 'TYPE':type, 'VER':ver, 'UID':uid, 'IMEI':imei, 'ICCID':iccid})
+        d_rsp = {'status_code':200}
+        return d_rsp
     

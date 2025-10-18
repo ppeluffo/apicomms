@@ -14,7 +14,7 @@ API_DATOS_PORT = os.environ.get('API_PGSQL_PORT','5300')
 API_DATOS_URLBASE = f"http://{API_DATOS_HOST}:{API_DATOS_PORT}/apidatos"
 
 # DEBUG->INFO->ERROR
-LOG_LEVEL = os.environ.get('LOG_LEVEL','INFO')
+LOG_LEVEL = os.environ.get('LOG_LEVEL','DEBUG')
 
 
 

@@ -1,7 +1,6 @@
 #!/home/pablo/Spymovil/python/proyectos/APICOMMS_2025/.venv/bin/python
 """
 """
-
 from flask import current_app
 from config import settings
 import requests
@@ -21,12 +20,17 @@ class Apiredis:
         params = {'unit':unit}
         try:
             r = requests.get(f"{self.BASE_URL}/dataline", params=params, timeout=10 )
-            d_rsp = {'status_code': r.status_code, 'd_dataline': r.json() }
-
         except Exception as e: 
             self.logger.error( f"Error-> {e}")
             d_rsp = {'status_code': 502,  'msg':f"{e}" }
 
+        if r.status_code == 200:
+            payload = r.json()
+            d_rsp = {'status_code':200} | payload
+        else:
+            d_rsp = {'status_code': r.status_code }
+        
+        #self.logger.debug(f"d_rsp={d_rsp}")
         return d_rsp
             
     def put_dataline(self, id=None, tipo=None, jparams=None):
@@ -36,20 +40,24 @@ class Apiredis:
         current_app.config["ACCESOS_REDIS"] += 1
 
         params = {'unit':id, 'type':tipo}
-
         #self.logger.debug(f"params={params}")
         #self.logger.debug(f"jparams={jparams}")
-
         try:
             r = requests.put(f"{self.BASE_URL}/dataline", params=params, json=jparams, timeout=10 )
-            d_rsp = {'status_code': r.status_code, 'json': r.json() }
 
         except Exception as e: 
             self.logger.error( f"Error-> {e}")
             d_rsp = {'status_code': 502,  'msg':f"{e}" }
 
+        if r.status_code == 200:
+            payload = r.json()
+            d_rsp = {'status_code':200} | payload
+        else:
+            d_rsp = {'status_code': r.status_code }
+        
+        #self.logger.debug(f"d_rsp={d_rsp}")
         return d_rsp
-    
+      
     def ping(self):
         """
         Si el server responde, el ping da True.
@@ -60,12 +68,18 @@ class Apiredis:
 
         try:
             r = requests.get(f"{self.BASE_URL}/ping", timeout=10 )
-            d_rsp = {'status_code': r.status_code, 'json': r.json() }
 
         except Exception as e: 
             self.logger.error( f"Error-> {e}")
             d_rsp = {'status_code': 502,  'msg':f"{e}" }
 
+        if r.status_code == 200:
+            payload = r.json()
+            d_rsp = {'status_code':200} | payload
+        else:
+            d_rsp = {'status_code': r.status_code }
+        
+        #self.logger.debug(f"d_rsp={d_rsp}")
         return d_rsp
 
     def read_configuration(self, id=None):
@@ -84,12 +98,11 @@ class Apiredis:
             d_rsp = {'status_code': 502,  'msg':f"{e}" }
         
         if r.status_code == 200:
-            # Cada elemento es del tipo: {'TYPE':args['type'], 'ID':args['unit'], 'D_LINE':d_params}.
             payload = r.json()
-            d_rsp = {'status_code': 200,  'd_config':payload }
+            d_rsp = {'status_code':200} | payload
         else:
             d_rsp = {'status_code': r.status_code }
-
+        
         #self.logger.debug(f"d_rsp={d_rsp}")
         return d_rsp
 
@@ -128,12 +141,12 @@ class Apiredis:
             d_rsp = {'status_code': 502,  'msg':f"{e}" }
         
         if r.status_code == 200:
-            # Cada elemento es del tipo: {'TYPE':args['type'], 'ID':args['unit'], 'D_LINE':d_params}.
             payload = r.json()
-            d_rsp = {'status_code': 200,  'd_ordenes_plc':payload }
+            d_rsp = {'status_code':200} | payload
         else:
             d_rsp = {'status_code': r.status_code }
-
+        
+        #self.logger.debug(f"d_rsp={d_rsp}")
         return d_rsp   
     
     def delete_ordenesplc(self, unit=None):
@@ -145,16 +158,50 @@ class Apiredis:
         try:
             params = {'unit': unit }
             r = requests.delete(f"{self.BASE_URL}/ordenesplc", params=params, timeout=10 )
+            d_rsp = {'status_code': 200 }
+            
+        except Exception as e: 
+            self.logger.error( f"Error-> {e}")
+            d_rsp = {'status_code': 502,  'msg':f"{e}" }
+        
+        return d_rsp   
+    
+    def get_uid2id(self, uid=None):
+        """
+        """
+        self.logger.debug("")
+        current_app.config["ACCESOS_REDIS"] += 1
+        
+        try:
+            params = {'uid': uid }
+            r = requests.get(f"{self.BASE_URL}/uid2id", params=params, timeout=10 )
             
         except Exception as e: 
             self.logger.error( f"Error-> {e}")
             d_rsp = {'status_code': 502,  'msg':f"{e}" }
         
         if r.status_code == 200:
-            # Cada elemento es del tipo: {'TYPE':args['type'], 'ID':args['unit'], 'D_LINE':d_params}.
             payload = r.json()
-            d_rsp = {'status_code': 200,  'd_ordenes_plc':payload }
+            d_rsp = {'status_code':200} | payload
         else:
             d_rsp = {'status_code': r.status_code }
 
-        return d_rsp   
+        #self.logger.debug(f"d_rsp={d_rsp}")
+        return d_rsp
+
+    def set_uid2id(self, uid=None, id=None):
+        """
+        """
+        self.logger.debug("")
+        current_app.config["ACCESOS_REDIS"] += 1
+        
+        try:
+            jparams = {'uid': uid, 'id': id }
+            r = requests.put(f"{self.BASE_URL}/uid2id", json=jparams, timeout=10 )
+            d_rsp = {'status_code': 200 }
+
+        except Exception as e: 
+            self.logger.error( f"Error-> {e}")
+            d_rsp = {'status_code': 502,  'msg':f"{e}" }
+
+        return d_rsp

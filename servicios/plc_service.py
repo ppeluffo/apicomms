@@ -1,8 +1,8 @@
 #!/home/pablo/Spymovil/python/proyectos/APICOMMS_2025/.venv/bin/python
 
-from usecases.plc_pingframe_usecase import PlcPingFrameUsecase
-from usecases.plc_configframe_usecase import PlcConfigFrameUsecase
-from usecases.plc_dataframe_usecase import PlcDataFrameUsecase
+from usecases.plc.pingframe_usecase import PlcPingFrameUsecase
+from usecases.plc.configframe_usecase import PlcConfigFrameUsecase
+from usecases.plc.dataframe_usecase import PlcDataFrameUsecase
 
 class PlcService:
     """
