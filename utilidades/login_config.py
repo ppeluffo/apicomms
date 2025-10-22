@@ -5,6 +5,23 @@ import sys
 import os
 from config import settings
 
+class LevelBasedFormatter(logging.Formatter):
+    """Formatter que cambia el formato según el nivel del log."""
+
+    FORMATS = {
+        logging.DEBUG:    "%(asctime)s - %(name)s - [DEBUG] - [%(module)s.%(funcName)s] - %(message)s",
+        logging.INFO:     "%(asctime)s - %(name)s - [INFO] - [%(funcName)s] - %(message)s",
+        logging.WARNING:  "%(asctime)s - %(name)s - [WARN] - [%(funcName)s] - %(message)s (%(filename)s:%(lineno)d)",
+        logging.ERROR:    "%(asctime)s - %(name)s - [ERROR] - [%(funcName)s] - %(message)s (%(filename)s:%(lineno)d)",
+        logging.CRITICAL: "%(asctime)s - %(name)s - [CRIT] - [%(funcName)s] - %(message)s (%(filename)s:%(lineno)d)",
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno,
+                                   "%(asctime)s - %(name)s - [%(levelname)s] - %(funcName)s - %(message)s")
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
+    
 def configure_logger(name: str = "app", gunicorn: bool = False) -> logging.Logger:
     
     logger = logging.getLogger(name)
@@ -28,7 +45,8 @@ def configure_logger(name: str = "app", gunicorn: bool = False) -> logging.Logge
             formatter = logging.Formatter(
                 "%(asctime)s - %(name)s - %(levelname)s - [%(module)s.%(funcName)s] - %(message)s"
             )
-            handler.setFormatter(formatter)
+           # handler.setFormatter(formatter)
+            handler.setFormatter(LevelBasedFormatter()) 
             logger.addHandler(handler)
 
     return logger

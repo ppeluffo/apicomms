@@ -30,14 +30,18 @@ class DlgResource(Resource):
             * El header Content-Type debería ser algo como "application/octet-stream"
         '''
 
-        start = time.time()
+        start = time.perf_counter()
         current_app.config["ACCESOS_REDIS"] = 0
+        current_app.config["DEBUG_ID"] = self.dlg_service.read_debug_id()
 
         self.logger.debug("")
 
         # Parseo todos las variables de querystring
-        d_params = request.args.to_dict()                   
-        self.logger.debug(f"d_params={d_params}")
+        d_params = request.args.to_dict()  
+        unit_id = d_params['ID']
+        current_app.config["UNIT_ID"] = unit_id   
+        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
+            self.logger.info(f"d_params={d_params}")
 
         d_rsp = self.dlg_service.procesar_frame(d_params)
         
@@ -48,11 +52,13 @@ class DlgResource(Resource):
         else:
             raw_response = ""
             
-        self.logger.debug(f"raw_response->{raw_response}")
+        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
+            self.logger.info(f"raw_response->{raw_response}")
+
         response = (f'<html>{raw_response}</html>')
         
         # Stats
-        end = time.time()
+        end = time.perf_counter()
         elapsed_time = (end - start) * 1000
         self.logger.info(f"GET: transaction time: {elapsed_time:.2f} msecs, Accesos REDIS: {current_app.config['ACCESOS_REDIS']}")
 

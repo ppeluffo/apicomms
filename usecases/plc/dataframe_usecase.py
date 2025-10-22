@@ -1,10 +1,10 @@
 #!/home/pablo/Spymovil/python/proyectos/APICOMMS_2025/.venv/bin/python
 
-
 from utilidades.plc_memblocks import Memblock
 from pymodbus.utilities import computeCRC
 from datetime import datetime
 import struct
+from flask import current_app
 
 class PlcDataFrameUsecase:
     """
@@ -39,7 +39,7 @@ class PlcDataFrameUsecase:
 
         # 1) El CRC debe ser correcto. Lo debo calcular con todos los bytes (inclusive el 'D')
         if not self.mbk.check_payload_crc_valid(payload):
-            self.logger.debug(f"unit_id={unit_id}, rx_payload CRC Error")
+            self.logger.info(f"unit_id={unit_id}, rx_payload CRC Error")
             return {'status_code': 400}
         #
         # 2) Elimino el primer caracter y los 2 últimos (crc)
@@ -63,6 +63,7 @@ class PlcDataFrameUsecase:
         return d_rsp    
 
     ############################################################
+
     def helper_generate_sys_val(self, nombre):
         '''
         Por ahora solo es para el TIMESTAMP
@@ -113,7 +114,8 @@ class PlcDataFrameUsecase:
         l_resposes_mbk = []
         # Esta mbk me da las respuestas a enviar. Debo completarlo
         l_respuestas_mbk = self.mbk.get_respuestas_mbk()
-        #self.logger.debug(f"l_respuestas_mbk={l_respuestas_mbk}")
+        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
+            self.logger.info(f"l_respuestas_mbk={l_respuestas_mbk}")
 
         # Para no leer en c/variable las ordenes, la leo una sola vez y las borro
         d_ordenes_plc = self.helper_read_ordenesplc(unit_id)
@@ -132,7 +134,8 @@ class PlcDataFrameUsecase:
             l_resposes_mbk.append( [nombre, tipo, val ])
 
         # Tengo la lista ordenada de respuestas con los valores correspondientes.
-        self.logger.debug(f"l_responses_mbk={l_resposes_mbk}")
+        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
+            self.logger.info(f"l_responses_mbk={l_resposes_mbk}")
         # Serializo
         bytestream = self.mbk.pack_from_mbk(l_resposes_mbk)
         d_rsp = {'status_code': 200, 'bytestream': bytestream }
@@ -150,14 +153,14 @@ class PlcDataFrameUsecase:
         # 1) Le pido al repositorio que me de la configuracion
         d_rsp = self.repo.leer_configuracion_unidad(unit_id)
         assert isinstance(d_rsp, dict)
-        #self.logger.debug(f"unit_id={unit_id}, d_rsp={d_rsp}")
+        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
+            self.logger.info(f"unit_id={unit_id}, d_rsp={d_rsp}")
         
         if d_rsp.get('status_code',0) != 200:
             d_rsp = { 'status_code':400 }
             return d_rsp
         
         d_memblock = d_rsp.get('d_config',{}).get('MEMBLOCK',{})
-        self.logger.debug(f"unit_id={unit_id}, d_memblock={d_memblock}")
 
         # 2) El memblok de la configuracion se lo paso al mbk helper que instancie en el init.
         self.mbk.set_plcid(unit_id)                      # Carglo el plcid
@@ -165,14 +168,12 @@ class PlcDataFrameUsecase:
 
         # 3) Proceso los datos: Los extraigo de bytestream y los inserto en la bd(redis)   
         d_rsp = self.procesar_data_reception(unit_id, payload)
-        #self.logger.debug(f"id={id}, d_rsp={d_rsp}")
         if d_rsp.get('status_code',0) != 200:
             d_rsp = { 'status_code':400 }
             return d_rsp
         
         # 4) Genero la respuesta
         d_rsp = self.preparar_data_response(unit_id)
-        self.logger.debug(f"unit_id={unit_id}, d_rsp={d_rsp}")
         if d_rsp.get('status_code',0) != 200:
             d_rsp = { 'status_code':400 }
         

@@ -1,6 +1,7 @@
 #!/home/pablo/Spymovil/python/proyectos/APICOMMS_2025/.venv/bin/python
 
 from datetime import datetime
+from flask import current_app
 
 class DlgDataFrameUsecase:
     """
@@ -39,7 +40,9 @@ class DlgDataFrameUsecase:
         _ = d_dataline.pop('VER',None)
         _ = d_dataline.pop('CLASS',None)
 
-        #self.logger.debug(f"D_DATALINE={d_dataline}")
+        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
+            self.logger.info(f"ID={current_app.config['UNIT_ID']}: D_DATALINE={d_dataline}")
+
         d_rsp = self.repo.save_dataline(unit=self.dlgid, unit_type=unit_type, d_dataline=d_dataline)
         
         # Aunque haya dado error, continuo para no trancar al datalogger
@@ -60,7 +63,6 @@ class DlgDataFrameUsecase:
         raw_response = self.preparar_raw_response(ordenes)
 
         d_rsp = { 'status_code': 200, 'raw_response': raw_response }
-        self.logger.debug(f"ID={self.dlgid},RSP=[{raw_response}]")
         return d_rsp
     
 

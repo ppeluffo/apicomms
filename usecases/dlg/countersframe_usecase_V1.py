@@ -2,8 +2,8 @@
 
 from utilidades.str2int import str2int
 from utilidades.uhash import u_hash
-
 from usecases.dlg.countersframe_usecase import DlgCountersFrameUsecase
+
 
 class DlgCountersFrameUsecase_V1(DlgCountersFrameUsecase):
     """

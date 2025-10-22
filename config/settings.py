@@ -20,7 +20,7 @@ BDREDIS_DB = os.environ.get('BDREDIS_DB','0')
 
 
 # DEBUG->INFO->ERROR
-LOG_LEVEL = os.environ.get('LOG_LEVEL','DEBUG')
+LOG_LEVEL = os.environ.get('LOG_LEVEL','INFO')
 
 
 

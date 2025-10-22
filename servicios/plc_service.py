@@ -11,6 +11,10 @@ class PlcService:
         self.repo = repositorio
         self.logger = logger
     
+    def read_debug_id(self):
+        #self.logger.debug("")
+        return self.repo.read_debug_id()
+    
     def procesar_frame(self, unit_id=None, payload=None):
         """
         No importa la respuesta porque las estaciones OCEANUS no la procesan

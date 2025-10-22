@@ -136,7 +136,8 @@ class PlcUtils:
         d_payload = {}
         offset = 0
         bytestream = bytestream[1:-2]
-        print(f"MEMBLOCK={memblock}")
+        #print(f"bytestream={bytestream}")
+        #print(f"MEMBLOCK={memblock}")
         for element in memblock:
             #print(f"ELEMENT={element}")
             nombre, formato, valor = element[:3]

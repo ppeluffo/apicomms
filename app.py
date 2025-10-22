@@ -28,6 +28,8 @@ def create_app(gunicorn: bool = False):
     container = Container()
 
     app.config["ACCESOS_REDIS"] = 0
+    app.config["DEBUG_ID"] = ""
+    app.config["UNIT_ID"] = ""
 
     # Sobrescribir logger según modo
     container.logger.override(configure_logger("api-comms", gunicorn=gunicorn))

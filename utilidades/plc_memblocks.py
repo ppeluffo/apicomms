@@ -80,7 +80,7 @@ class Memblock:
         """
         """
         self.logger.debug("")
-        #self.logger.debug(f"memblok={memblock}")
+        self.logger.debug(f"memblok={memblock}")
         bytestream = b''
         for nombre, formato, valor in memblock:
             fmt = formato_map[formato]

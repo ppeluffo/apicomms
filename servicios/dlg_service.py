@@ -25,6 +25,10 @@ class DlgService:
         self.repo = repositorio
         self.logger = logger
     
+    def read_debug_id(self):
+        #self.logger.debug("")
+        return self.repo.read_debug_id()
+    
     def procesar_frame(self, d_params=None):
         """
         Hago una factoria de usecases
@@ -91,8 +95,3 @@ class DlgService:
         self.logger.debug(f"d_rsp={d_rsp}")
         return d_rsp
     
-
-
-
-    
-

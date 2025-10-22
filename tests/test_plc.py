@@ -5,11 +5,10 @@ Genero datos simulando ser un PLC.
 
 import requests
 from plc_utilities import PlcUtils
-import random
-import numpy as np
 import struct
 from pymodbus.utilities import computeCRC
 import pprint
+import argparse
 
 class Plc:
 
@@ -32,6 +31,7 @@ class Plc:
     def send_frame_ping(self):
         params = {'ID':self.id, 'TYPE':self.tipo , 'VER':self.ver}
         data = b'P\xe6\xcd'
+        print(f'SEND')
         r = requests.post(url=self.url, params=params, data=data, timeout=10)
         print(f"PLC PING TEST(POST): {r.status_code}")
         print(f"RESPONSE: {r.content}")
@@ -39,20 +39,22 @@ class Plc:
     def send_frame_config(self):
         params = {'ID':self.id, 'TYPE':self.tipo , 'VER':self.ver}
         data = b'C\xfe\xb1'
+        print(f'SEND')
         r = requests.post(url=self.url, params=params, data=data, timeout=10)
         print(f"PLC CONFIG TEST(POST): {r.status_code}")
         print(f"RESPONSE: {r.content}")
         
         # Procesamos la respuesta
-        payload = r.content
-        bytestream = payload[1:-2]
+        bytestream = r.content
         #
         if not self.plcutils.read_config_from_redis(self.id):
             print(f"Error: PLC {self.id} no esta configurado en Redis")
             return
         conf_mbk = self.plcutils.get_configuracion_mbk()
+        print(f'CONF_MBK={conf_mbk}')
         d_config_data = self.plcutils.unpack_from_mbk(bytestream, conf_mbk)
-        print(d_config_data)
+        print()
+        print(f'DATA={d_config_data}')
 
     def send_frame_data(self):
         if not self.plcutils.read_config_from_redis(self.id):
@@ -71,6 +73,7 @@ class Plc:
             params = {'ID':self.id, 'TYPE':self.tipo , 'VER':self.ver}
             headers = {"Content-Type": "application/octet-stream"}
             data = sresp
+            print(f'SEND')
             r = requests.post(url=self.url, params=params, data=data, headers=headers, timeout=10 )
 
         except Exception as e: 
@@ -88,15 +91,28 @@ class Plc:
             d_payload = self.plcutils.unpack_from_mbk(bytestream, self.plcutils.respuestas_mbk)
             pprint.pprint(d_payload)
 
+def make_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--frame", type=str, 
+                        choices=['ping', 'config', 'data'] )
+    return parser
+
 
 if __name__ == '__main__':
+
+    parser = make_arguments()
+    args = parser.parse_args()
 
     plc = Plc()
     plc.set_id = 'PLCTEST'
     plc.set_tipo = 'PLC'
     plc.set_ver = '1.0.0'
 
-    #plc.send_frame_ping()
-    #plc.send_frame_config()
-    plc.send_frame_data()
+    if args.frame == 'ping':
+        plc.send_frame_ping()
+    elif args.frame == 'config':
+        plc.send_frame_config()
+    elif args.frame == 'data':
+        plc.send_frame_data()
+
 

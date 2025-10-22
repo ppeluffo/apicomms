@@ -13,6 +13,10 @@ class RepoDatos:
         self.ds_redis = ds_redis
         self.logger = logger
 
+    def read_debug_id(self):
+        #self.logger.debug("")
+        return self.ds_redis.read_debug_id()
+    
     def ping_redis(self):
         """
         """

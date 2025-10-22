@@ -10,7 +10,22 @@ class ApiBdRedis:
     def __init__(self, logger):
         self.logger = logger
         self.rh = redis.Redis( settings.BDREDIS_HOST, settings.BDREDIS_PORT,settings.BDREDIS_DB, socket_connect_timeout=1)
+
+    def read_debug_id(self):
+        """
+        """
+        #self.logger.debug(f"")
+        current_app.config["ACCESOS_REDIS"] += 1
+
+        try:
+            debug_id = self.rh.hget('SPCOMMS', 'DEBUG_ID')
+            return debug_id.decode('utf-8')
         
+        except Exception as e:
+            self.logger.error( f"Redis Error {e}")
+        #
+        return None
+
     def ping(self):
         """
         Si el server responde, el ping da True.

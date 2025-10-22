@@ -29,11 +29,12 @@ class PlcResource(Resource):
             * La API no está retornando JSON, sino un flujo binario.
             * El header Content-Type debería ser algo como "application/octet-stream"
         '''
-
-        start = time.time()
+        
+        start = time.perf_counter()
         current_app.config["ACCESOS_REDIS"] = 0
+        current_app.config["DEBUG_ID"] = self.plc_service.read_debug_id()
 
-        self.logger.debug("")
+        self.logger.debug(f"")
         
         parser = reqparse.RequestParser()
         parser.add_argument('ID',type=str,location='args',required=True)
@@ -42,11 +43,16 @@ class PlcResource(Resource):
         args=parser.parse_args()
 
         unit_id = args['ID']
+        current_app.config["UNIT_ID"] = unit_id
         version = args['VER']
         tipo = args['TYPE']
         payload = request.get_data()
 
-        self.logger.debug(f"payload={payload}")
+        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
+            self.logger.info(f"LOG UNIT: {current_app.config["DEBUG_ID"]}")
+
+        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
+            self.logger.info(f"payload={payload}")
 
         d_rsp = self.plc_service.procesar_frame(unit_id=unit_id, payload=payload)
         assert isinstance(d_rsp, dict)
@@ -58,14 +64,15 @@ class PlcResource(Resource):
             bytestream = d_rsp.get('bytestream',None)
         else:
             bytestream = b''
-            
-        self.logger.debug(f"bytestream={bytestream}")
+
+        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
+            self.logger.info(f"bytestream={bytestream}")
 
         response = make_response(bytestream)
         response.headers['Content-type'] = 'application/binary'
          
         # Stats
-        end = time.time()
+        end = time.perf_counter()
         elapsed_time = (end - start) * 1000
         self.logger.info(f"POST: transaction time: {elapsed_time:.2f} msecs, Accesos REDIS: {current_app.config['ACCESOS_REDIS']}")
 
