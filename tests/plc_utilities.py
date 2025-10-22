@@ -8,7 +8,8 @@ import random
 import numpy as np
 import struct
 from pymodbus.utilities import computeCRC
-
+import pickle
+import redis
 
 formato_map = {
     'float': 'f',
@@ -16,40 +17,47 @@ formato_map = {
     'uchar': 'B'
 }
 
-class Plc:
+class PlcUtils:
 
     def __init__(self):
-        self.plcid = None
-        self.BASE_URL = 'http://127.0.0.1:5100/apiredis'
         self.configuracion_mbk = []
         self.datos_mbk = []
         self.respuestas_mbk = []
         self.bytestream = None   # datos serializados de salida
         self.sresp = None
+        self.rh = redis.Redis('127.0.0.1')
 
     def set_plcid(self, id=None):
         self.plcid = id
 
-    def read_config(self):
-        "El equipo debe estar configurado en REDIS"
-        
+    def get_configuracion_mbk(self):
+        return self.configuracion_mbk
+    
+    def get_datos_mbk(self):
+        return self.datos_mbk
+    
+    def get_respuestas_mbk(self):
+        return self.respuestas_mbk
+    
+    def read_config_from_redis(self, id=None):
+        """
+        El equipo debe estar configurado en REDIS
+        """          
         try:
-            params = {'unit': self.plcid }
-            r = requests.get(f"{self.BASE_URL}/config", params=params, timeout=10 )
-            
-        except Exception as e: 
-            print( f"Error-> {e}")
+            pkconfig = self.rh.hget( id, 'PKCONFIG')
+            if pkconfig is None:
+                return None
+
+        except Exception as e:
+            print( f"Redis Error {e}")
             return None
-        
-        if r.status_code == 200:
-            # Cada elemento es del tipo: {'TYPE':args['type'], 'ID':args['unit'], 'D_LINE':d_params}.
-            payload = r.json()
-            #print(f'payload={payload}')
-            d_memblock = payload.get('MEMBLOCK',{})
-            self.configuracion_mbk = d_memblock.get('CONFIGURACION',[])
-            self.datos_mbk = d_memblock.get('DATOS_PLC',[])
-            self.respuestas_mbk = d_memblock.get('DATOS_SRV',[])
-            return True
+
+        d_config = pickle.loads(pkconfig)
+        d_memblock = d_config.get('MEMBLOCK',{})
+        self.configuracion_mbk = d_memblock.get('CONFIGURACION',[])
+        self.datos_mbk = d_memblock.get('DATOS_PLC',[])
+        self.respuestas_mbk = d_memblock.get('DATOS_SRV',[])
+        return d_config
         
     def gen_data(self):
         for i in range(len(self.datos_mbk)):
@@ -66,7 +74,10 @@ class Plc:
         
         self.bytestream = b''
         for nombre, formato, valor in self.datos_mbk:
-            fmt = formato_map[formato]
+            fmt = formato_map[formato.lower()]
+            #print(f"formato={formato}, fmt={fmt}, valor={valor}")
+            if fmt == 'h':
+                valor = int(valor)
             packed = struct.pack(fmt, valor)
             self.bytestream += packed
         return self.bytestream
@@ -105,7 +116,7 @@ class Plc:
         if r.status_code == 200:
             print(f"RES OK")
             print(f"response={r.content()}")
-            
+         
     def desempaquetar(self):
 
         bytestream = self.sresp[1:-2]
@@ -117,6 +128,41 @@ class Plc:
             print(f'{nombre} -> {val_unpack}')
             offset += size
        
- 
+    def unpack_from_mbk(self, bytestream=None, memblock=None):
+        """
+        Funcion genrica que desempaquete de un memblock dado
+        """
+
+        d_payload = {}
+        offset = 0
+        bytestream = bytestream[1:-2]
+        print(f"MEMBLOCK={memblock}")
+        for element in memblock:
+            #print(f"ELEMENT={element}")
+            nombre, formato, valor = element[:3]
+            fmt = formato_map[formato]
+            size = struct.calcsize(fmt)
+            try:
+                val_unpack = struct.unpack(fmt, bytestream[offset:offset+size])[0]
+            except Exception as e:
+                print(f"Unpack Error {e}")
+                return None
+            
+            d_payload[nombre] = val_unpack
+            #print(f'{nombre} -> {val_unpack}')
+            offset += size
+
+        return d_payload
+
+    def pack_from_mbk(self, memblock=None):
+        """
+        """
+        #print(f"memblok={memblock}")
+        bytestream = b''
+        for nombre, formato, valor in memblock:
+            fmt = formato_map[formato]
+            packed = struct.pack(fmt, valor)
+            bytestream += packed
+        return bytestream
 
 

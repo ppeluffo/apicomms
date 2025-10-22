@@ -48,7 +48,7 @@ class DlgConfigAllFrameUsecase:
             self.logger.info(f"{self.dlgid} RESET CAUSE UNKNOWN")
 
         # 2) Le pido al repositorio que me de la configuracion
-        d_rsp = self.repo.leer_configuracion(self.dlgid)
+        d_rsp = self.repo.leer_configuracion_unidad(self.dlgid)
         assert isinstance(d_rsp, dict)
         self.logger.debug(f"id={self.dlgid}, d_rsp={d_rsp}")
         
@@ -57,7 +57,7 @@ class DlgConfigAllFrameUsecase:
             d_rsp = { 'status_code': 200, 'raw_response': 'CLASS=CONF_ALL&CONFIG=ERROR' }
             return d_rsp
  
-        d_conf = d_rsp
+        d_conf = d_rsp['d_config']
  
         # 2) Actualizo uid2id
         uid = d_params.get('UID',None)

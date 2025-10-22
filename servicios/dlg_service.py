@@ -12,6 +12,9 @@ from usecases.dlg.consignaframe_usecase import DlgConsignaFrameUsecase
 from usecases.dlg.pilotoframe_usecase import DlgPilotoFrameUsecase
 from usecases.dlg.flowcontrolframe_usecase import DlgFlowControlFrameUsecase
 from usecases.dlg.configallframe_usecase import DlgConfigAllFrameUsecase
+from usecases.dlg.datanrframe_usecase import DlgDataNrFrameUsecase
+from usecases.dlg.dataframe_usecase import DlgDataFrameUsecase
+from usecases.dlg.dataframe_usecase_V1 import DlgDataFrameUsecase_V1
 
 from utilidades.version_to_int import version2int
 
@@ -73,13 +76,14 @@ class DlgService:
             d_rsp = DlgRecoverFrameUsecase(self.repo, self.logger).procesar_frame(d_params)        
         
         elif clase_frame == 'DATA':
-            #d_rsp = DlgDataFrameUsecase(self.logger).procesar_frame(d_params)
-            pass
+            if fw_type == "FWDLGX" and fw_ver == 110:
+                d_rsp = DlgDataFrameUsecase_V1(self.repo, self.logger).procesar_frame(d_params)
+            else:
+                d_rsp = DlgDataFrameUsecase(self.repo, self.logger).procesar_frame(d_params)
 
         elif clase_frame == 'DATANR':
-            #d_rsp = DlgDataNrFrameUsecase(self.logger).procesar_frame(d_params)
-            pass
-        
+            d_rsp = DlgDataNrFrameUsecase(self.repo,self.logger).procesar_frame(d_params)
+
         else:
             # Catch all errors
             d_rsp = {'status_code': 500, 'raw_response':'FAIL'}
@@ -87,6 +91,7 @@ class DlgService:
         self.logger.debug(f"d_rsp={d_rsp}")
         return d_rsp
     
+
 
 
     

@@ -25,7 +25,7 @@ class PlcDataFrameUsecase:
     
     ############################################################
     
-    def procesar_data_reception(self, id=None, payload=None):
+    def procesar_data_reception(self, unit_id=None, payload=None):
         """
         Proceso la recepcion de datos.
         Debo usar el datos_mbk.
@@ -39,26 +39,26 @@ class PlcDataFrameUsecase:
 
         # 1) El CRC debe ser correcto. Lo debo calcular con todos los bytes (inclusive el 'D')
         if not self.mbk.check_payload_crc_valid(payload):
-            self.logger.debug(f"id={id}, rx_payload CRC Error")
+            self.logger.debug(f"unit_id={unit_id}, rx_payload CRC Error")
             return {'status_code': 400}
         #
         # 2) Elimino el primer caracter y los 2 últimos (crc)
         bytestream = payload[1:-2]
         #
         # 3) Desempaqueto el bytestream de acuerdo al formato indicado en datos_mbk
-        d_payload = self.mbk.unpack_from_datosmbk(bytestream)
-        if d_payload is None:
+        d_dataline = self.mbk.unpack_from_datosmbk(bytestream)
+        if d_dataline is None:
             return {'status_code': 400}
         
         # 4) Agrego los campos DATE y TIME para normalizarlos a la BD.
         # 'DATE': '230417', 'TIME': '161057'
         now = datetime.now()
-        d_payload['DATE'] = now.strftime('%y%m%d')
-        d_payload['TIME'] = now.strftime('%H%M%S')
+        d_dataline['DATE'] = now.strftime('%y%m%d')
+        d_dataline['TIME'] = now.strftime('%H%M%S')
         #self.logger.debug(f"id={id}, d_payload={d_payload}")
 
         # 5. Guardo los datos recibidos
-        d_rsp = self.repo.save_plc_dataline(id, d_payload)
+        d_rsp = self.repo.save_dataline(unit_id, unit_type='PLC', d_dataline=d_dataline )
 
         return d_rsp    
 
@@ -76,11 +76,11 @@ class PlcDataFrameUsecase:
         #
         return 0
 
-    def helper_read_ordenesplc(self,id=None):
+    def helper_read_ordenesplc(self,unit_id=None):
         """
         """
         self.logger.debug("")
-        d_rsp = self.repo.read_ordenesplc(unit=id)
+        d_rsp = self.repo.read_ordenesplc(unit=unit_id)
         assert isinstance(d_rsp, dict)
         if d_rsp.get('status_code',0) == 200:
             d_ordenes_plc = d_rsp.get('d_ordenes_plc',{})
@@ -102,7 +102,7 @@ class PlcDataFrameUsecase:
             val = def_val
         return val
 
-    def preparar_data_response(self, id=None):
+    def preparar_data_response(self, unit_id=None):
         """
         Genero el bytestream para enviar de vuelta al PLC
         Las respuestas se mandan de acuerdo al respuestas_mbk
@@ -111,13 +111,13 @@ class PlcDataFrameUsecase:
         self.logger.debug("")
 
         l_resposes_mbk = []
+        # Esta mbk me da las respuestas a enviar. Debo completarlo
         l_respuestas_mbk = self.mbk.get_respuestas_mbk()
-        self.logger.debug(f"l_respuestas_mbk={l_respuestas_mbk}")
+        #self.logger.debug(f"l_respuestas_mbk={l_respuestas_mbk}")
 
         # Para no leer en c/variable las ordenes, la leo una sola vez y las borro
-        d_ordenes_plc = self.helper_read_ordenesplc(id)
-        _ = self.repo.delete_ordenesplc(id)
-
+        d_ordenes_plc = self.helper_read_ordenesplc(unit_id)
+        _ = self.repo.delete_ordenesplc(unit_id)
         for (nombre,tipo,def_val,origen,rem_name) in l_respuestas_mbk:
             if origen == 'SYS':
                 val = self.helper_generate_sys_val(nombre)
@@ -131,15 +131,16 @@ class PlcDataFrameUsecase:
                  
             l_resposes_mbk.append( [nombre, tipo, val ])
 
+        # Tengo la lista ordenada de respuestas con los valores correspondientes.
         self.logger.debug(f"l_responses_mbk={l_resposes_mbk}")
-
+        # Serializo
         bytestream = self.mbk.pack_from_mbk(l_resposes_mbk)
         d_rsp = {'status_code': 200, 'bytestream': bytestream }
         return d_rsp
 
     ############################################################           
     
-    def procesar_frame(self, id=None, payload=None):
+    def procesar_frame(self, unit_id=None, payload=None):
         """
         -Proceso primero la recepcion
         -Luego preparo la respuesta.
@@ -147,31 +148,31 @@ class PlcDataFrameUsecase:
         self.logger.debug("")
         
         # 1) Le pido al repositorio que me de la configuracion
-        d_rsp = self.repo.leer_configuracion(id)
+        d_rsp = self.repo.leer_configuracion_unidad(unit_id)
         assert isinstance(d_rsp, dict)
-        #self.logger.debug(f"id={id}, d_rsp={d_rsp}")
+        #self.logger.debug(f"unit_id={unit_id}, d_rsp={d_rsp}")
         
         if d_rsp.get('status_code',0) != 200:
             d_rsp = { 'status_code':400 }
             return d_rsp
         
         d_memblock = d_rsp.get('d_config',{}).get('MEMBLOCK',{})
-        self.logger.debug(f"id={id}, d_memblock={d_memblock}")
+        self.logger.debug(f"unit_id={unit_id}, d_memblock={d_memblock}")
 
         # 2) El memblok de la configuracion se lo paso al mbk helper que instancie en el init.
-        self.mbk.set_plcid(id)                      # Carglo el plcid
+        self.mbk.set_plcid(unit_id)                      # Carglo el plcid
         self.mbk.set_memblock(d_memblock)           # Cargo la configuracion
 
         # 3) Proceso los datos: Los extraigo de bytestream y los inserto en la bd(redis)   
-        d_rsp = self.procesar_data_reception(id, payload)
+        d_rsp = self.procesar_data_reception(unit_id, payload)
         #self.logger.debug(f"id={id}, d_rsp={d_rsp}")
         if d_rsp.get('status_code',0) != 200:
             d_rsp = { 'status_code':400 }
             return d_rsp
         
         # 4) Genero la respuesta
-        d_rsp = self.preparar_data_response(id)
-        self.logger.debug(f"id={id}, d_rsp={d_rsp}")
+        d_rsp = self.preparar_data_response(unit_id)
+        self.logger.debug(f"unit_id={unit_id}, d_rsp={d_rsp}")
         if d_rsp.get('status_code',0) != 200:
             d_rsp = { 'status_code':400 }
         
@@ -183,3 +184,4 @@ class PlcDataFrameUsecase:
         return d_rsp
 
     
+

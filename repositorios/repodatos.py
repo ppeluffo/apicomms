@@ -1,49 +1,87 @@
 #!/home/pablo/Spymovil/python/proyectos/APICOMMS_2025/.venv/bin/python3
 
+import pickle
+import datetime as dt
+
 class RepoDatos:
     """
     Repositorio que se encarga de consultar las apis de redis y datossql
     """
     
-    def __init__(self, ds_apidatos, ds_apiredis, logger):
-        self.ds_apidatos = ds_apidatos
-        self.ds_apiredis = ds_apiredis
+    def __init__(self, ds_pgsql, ds_redis, logger):
+        self.ds_pgsql = ds_pgsql
+        self.ds_redis = ds_redis
         self.logger = logger
-        
-    def ping_apiredis(self):
+
+    def ping_redis(self):
         """
         """
         self.logger.debug("")
-        return self.ds_apiredis.ping()
+        return self.ds_redis.ping()
     
-    def ping_apidatos(self):
+    def ping_pgsql(self):
         """
         """
         self.logger.debug("")
-        return self.ds_apidatos.ping()
+        return self.ds_pgsql.ping()
+        
+    #####################################################################################
 
-    def save_oceanus_dataline(self,id=None,d_mags=None):
+    def save_dataline(self, unit=None, unit_type=None, d_dataline=None):
         """
-        La apiredis espera en el entrypoint /dataline un dict con la
-        key 'dataline'
-        """
-        self.logger.debug("")
-        jparams = { 'dataline': d_mags }
-
-        tipo='OCEANUS'
-        _ = self.ds_apiredis.put_dataline(id=id, tipo=tipo, jparams=jparams)
-
-    def save_plc_dataline(self,id=None, d_mags=None):
-        """
-        La apiredis espera en el entrypoint /dataline un dict con la
-        key 'dataline'
+        Al recibir un dataline se hacen 3 funciones:
+        - Se guarda en el HSET de la unidad
+        - Se guarda el timestamp en el HSET TIMESTAMP. Este nos permite saber cuando llegaron el ultimo dato de c/unidad
+        - Se guarda en una cola de datos recibidos RXDATA_QUEUE.
         """
         self.logger.debug("")
-        jparams = { 'dataline': d_mags }
-        tipo='PLC'
-        return self.ds_apiredis.put_dataline(id=id, tipo=tipo, jparams=jparams)
 
-    def leer_configuracion(self, id=None):
+        # Timestamp: Indica la fecha/hora de recibido el dato.
+        timestamp = dt.datetime.now()
+        try:
+            pk_timestamp = pickle.dumps(timestamp)
+        except Exception as e:
+            self.logger.error( f"Error->{e}")
+            d_rsp = {'status_code':502, 'msg':f"{e}"}
+            return d_rsp
+        #
+        # pk_dataline: Los datos recibidos se guardan y encolan en forma serializada pickle
+        try:
+            pk_dataline = pickle.dumps(d_dataline)
+        except Exception as e:
+            self.logger.error( f"Error->{e}")
+            d_rsp = {'status_code':502, 'msg':f"{e}"}
+            return d_rsp
+        #
+        # pk_datastruct: Estructura de datos serializada que se encola en RXDATA_QUEUE
+        d_datastruct = {'TYPE':unit_type, 'ID':unit, 'D_LINE':d_dataline}
+        try:
+            pk_datastruct = pickle.dumps(d_datastruct)
+        except Exception as e:
+            self.logger.error( f"Error->{e}")
+            d_rsp = {'status_code':502, 'msg':f"{e}"}
+            return d_rsp
+        #
+        # Debemos hacer 3 operaciones en la redis:
+
+        # 1. Guardamos los datos en el HSET de la unidad
+        d_rsp = self.ds_redis.save_dataline(unit, pk_dataline)
+        if d_rsp.get('status_code',0) != 200:
+            return d_rsp
+        
+        # 2. Guardamos el timestamp
+        d_rsp = self.ds_redis.save_timestamp(unit, pk_timestamp)
+        if d_rsp.get('status_code',0) != 200:
+            return d_rsp
+        
+        # 3. Encolo todos los datos en RXDATA_QUEUE para luego procesarlos y pasarlos a pgsql.
+        d_rsp = self.ds_redis.enqueue_dataline(unit, pk_datastruct)
+        if d_rsp.get('status_code',0) != 200:
+            return d_rsp
+                
+        return d_rsp
+
+    def leer_configuracion_unidad(self, unit_id=None):
         """
         Le pide la configuracion a REDIS.
         Si no existe la pide a PGSQL y si este la devuelve, actualiza REDIS
@@ -51,81 +89,104 @@ class RepoDatos:
         """
         self.logger.debug("")
 
-        d_rsp = self.ds_apiredis.read_configuration(id)
+        d_rsp = self.ds_redis.read_configuracion_unidad(unit_id)
         assert isinstance(d_rsp, dict)
 
         status_code = d_rsp.get('status_code', 500)
-        if status_code == 200:
-            # La configuracion esta en la redis
-            #self.logger.debug(f"configuracion en redis: d_rsp={d_rsp}")
+        if d_rsp.get('status_code',0) == 200:
+            # pkconfig es un string
+            pkconfig = d_rsp.get('pkconfig', '')
+            try:
+                d_config = pickle.loads(pkconfig)
+                #self.logger.debug(f"Redis d_config={d_config}")
+                assert isinstance(d_config, dict)
+                d_rsp = {'status_code':200, 'd_config': d_config }
+                
+            except Exception as e:
+                self.logger.error( f"ConfigService:read_config: {e}")
+                d_rsp = {'status_code':502, 'msg':f"{e}"}
+
+            self.logger.debug(f"Config found in Redis")
             return d_rsp
         
         # La configuracion NO esta en la redis: busco en la pgsql
-        d_rsp = self.ds_apidatos.read_configuration(id)
+        d_rsp = self.ds_pgsql.read_configuracion_unidad(unit_id)
         assert isinstance(d_rsp, dict)
         
         status_code = d_rsp.get('status_code', 500)
         if status_code == 200:
+            # La BD devuelve una tupla !!
+            d_config = d_rsp['jconfig_raw'][0]
+            #self.logger.debug(f"Pgsql d_config={d_config}")
+            assert isinstance(d_config, dict)
+            d_rsp = { 'status_code':200, 'd_config': d_config}
+
             # La configuracion estaba en la pgsql: actualizo la redis
             self.logger.debug(f"configuracion en pgsql: d_rsp={d_rsp}")
-            d_config = d_rsp.get('d_config',{})
-            _ = self.ds_apiredis.set_configuration(id, d_config)
+
+            try:
+                pkconfig = pickle.dumps(d_config)
+            except Exception as e:
+                self.logger.error( f"ConfigService:update_config: {e}")
+                d_rsp = {'status_code':502, 'msg':f"{e}"}
+                return d_rsp
+
+            self.logger.debug(f"Config found in Pgsql")
+            _ = self.ds_redis.set_configuracion_unidad(unit_id, pkconfig)
             return d_rsp
         
         # Aqui es que no hay configuracion
         #d_rsp = {'status_code':404, 'd_config': {} }
         return d_rsp
-    
-    def read_dataline(self, unit=None):
-        """
-        Leemos una dataline de REDIS.
-        """
-        self.logger.debug("")
 
-        return self.ds_apiredis.read_dataline(unit=unit)
+    #####################################################################################
 
     def read_ordenesplc(self, unit=None):
         """.
         """
         self.logger.debug("")
 
-        return self.ds_apiredis.read_ordenesplc(unit=unit)
+        d_rsp = self.ds_redis.read_ordenesplc(unit=unit)
+        if d_rsp.get('status_code',0) == 200:
+            pk_ordenes_plc = d_rsp['pk_ordenes_plc']
+            try:
+                d_ordenes_plc = pickle.loads(pk_ordenes_plc) 
+                d_rsp = {'status_code':200, 'd_ordenes_plc':d_ordenes_plc}
+                
+            except Exception as e:
+                self.logger.error( f"Error-> {e}")
+                d_rsp = {'status_code':502, 'msg':f"{e}"}
+
+        return d_rsp
     
     def delete_ordenesplc(self, unit=None):
         """.
         """
         self.logger.debug("")
 
-        return self.ds_apiredis.delete_ordenesplc(unit=unit)
-    
-    def get_id_from_uid(self, uid=None):
-        """.
+        return self.ds_redis.delete_ordenesplc(unit=unit)
+ 
+    def read_dataline(self, unit=None):
+        """
+        Leemos una dataline de REDIS.
         """
         self.logger.debug("")
 
-        # 1. Le pregunto a Redis por uid->id
-        d_rsp = self.ds_apiredis.get_uid2id(uid)
-        assert isinstance(d_rsp, dict)
+        d_rsp =  self.ds_redis.read_dataline(unit=unit)
+        if d_rsp.get('status_code',0) == 200:
+            pk_dataline = d_rsp['pk_dataline']
+            try:
+                d_dataline = pickle.loads(pk_dataline) 
+                d_rsp = {'status_code':200, 'd_dataline':d_dataline}
 
-        status_code = d_rsp.get('status_code', 0)
-        if status_code == 200:
-            return d_rsp
-        
-        # 2. No esta en Redis: pregunto a SQL
-        d_rsp = self.ds_apidatos.get_uid2id(uid)
-        assert isinstance(d_rsp, dict)
+            except Exception as e:
+                self.logger.error( f"Error-> {e}")
+                d_rsp = {'status_code':502, 'msg':f"{e}"}
 
-        status_code = d_rsp.get('status_code', 0)
-        if status_code == 200:
-            # Actualizo la redis
-            id = d_rsp.get('id','')
-            _ = self.ds_apiredis.update_uid2id(uid, id)
-            return d_rsp
-        
-        # No esta en Redis ni en SQL: Error.
-        d_rsp = { 'status_code': 400 }
         return d_rsp
     
+    #####################################################################################
+
     def update_uid2id( self, id=None, uid=None):
         """
         Leo el uidid de redis. Si coincide salgo.
@@ -136,9 +197,37 @@ class RepoDatos:
         d_rsp = self.get_id_from_uid(uid)
         if d_rsp.get('status_code',0 ) != 200:
             # No esta.
-            _ = self.ds_apiredis.set_uid2id(uid=uid, id=id)
-            _ = self.ds_apidatos.set_uid2id(uid=uid, id=id)
+            _ = self.ds_redis.set_id_and_uid(uid=uid, id=id)
+            _ = self.ds_pgsql.set_id_and_uid(uid=uid, id=id)
         d_rsp = {'status_code':200}
+        return d_rsp
+    
+    def get_id_from_uid(self, uid=None):
+        """.
+        """
+        self.logger.debug("")
+
+        # 1. Le pregunto a Redis por uid->id
+        d_rsp = self.ds_redis.get_id_from_uid(uid)
+        assert isinstance(d_rsp, dict)
+
+        status_code = d_rsp.get('status_code', 0)
+        if status_code == 200:
+            return d_rsp
+        
+        # 2. No esta en Redis: pregunto a SQL
+        d_rsp = self.ds_pgsql.get_id_from_uid(uid)
+        assert isinstance(d_rsp, dict)
+
+        status_code = d_rsp.get('status_code', 0)
+        if status_code == 200:
+            # Actualizo la redis
+            id = d_rsp.get('id','')
+            _ = self.ds_redis.set_id_and_uid(uid, id)
+            return d_rsp
+        
+        # No esta en Redis ni en SQL: Error.
+        d_rsp = { 'status_code': 400 }
         return d_rsp
     
     def update_commsparameters( self, d_conf=None):
@@ -155,4 +244,41 @@ class RepoDatos:
         #_ = update_comms_conf( self.d_args, {'DLGID':dlgid, 'TYPE':type, 'VER':ver, 'UID':uid, 'IMEI':imei, 'ICCID':iccid})
         d_rsp = {'status_code':200}
         return d_rsp
+    
+    #####################################################################################
+
+    def read_ordenes(self, unit=None):
+        """.
+        """
+        self.logger.debug("")
+
+        d_rsp = self.ds_redis.read_ordenes(unit=unit)
+        if d_rsp.get('status_code',0) == 200:
+            pk_ordenes = d_rsp['pk_ordenes']
+            try:
+                d_ordenes = pickle.loads(pk_ordenes) 
+                d_rsp = {'status_code':200, 'd_ordenes':d_ordenes }
+                
+            except Exception as e:
+                self.logger.error( f"Error-> {e}")
+                d_rsp = {'status_code':502, 'msg':f"{e}"}
+
+        return d_rsp
+    
+    def delete_ordenes(self, unit=None):
+        """.
+        """
+        self.logger.debug("")
+
+        return self.ds_redis.delete_ordenes(unit=unit)
+ 
+     #####################################################################################
+
+    def delete_configuracion_unidad(self, unit_id=None):
+        """.
+        """
+        self.logger.debug("")
+
+        return self.ds_redis.delete_configuracion_unidad(unit_io=unit_id)
+    
     

@@ -5,13 +5,19 @@ import os
 #
 API_VERSION = os.environ.get('API_VERSION','R002 @ 2025-09-30')
 #
-API_REDIS_HOST = os.environ.get('API_REDIS_HOST','127.0.0.1')
-API_REDIS_PORT = os.environ.get('API_REDIS_PORT','5100')
-API_REDIS_URLBASE = f"http://{API_REDIS_HOST}:{API_REDIS_PORT}/apiredis"
+#PGSQL_HOST = os.environ.get('PGSQL_HOST', '192.168.0.8')
+#PGSQL_PORT = os.environ.get('PGSQL_PORT','5432')
+PGSQL_HOST = os.environ.get('PGSQL_HOST', '127.0.0.1')
+PGSQL_PORT = os.environ.get('PGSQL_PORT','5435')
+PGSQL_USER = os.environ.get('PGSQL_USER', 'admin')
+PGSQL_PASSWD = os.environ.get('PGSQL_PASSWD', 'pexco599')
+PGSQL_BD = os.environ.get('PGSQL_BD','bd_spcomms')
+PGSQL_URL = f"postgresql+psycopg2://{PGSQL_USER}:{PGSQL_PASSWD}@{PGSQL_HOST}:{PGSQL_PORT}/{PGSQL_BD}"
 
-API_DATOS_HOST = os.environ.get('API_PGSQL_HOST','127.0.0.1')
-API_DATOS_PORT = os.environ.get('API_PGSQL_PORT','5300')
-API_DATOS_URLBASE = f"http://{API_DATOS_HOST}:{API_DATOS_PORT}/apidatos"
+BDREDIS_HOST = os.environ.get('BDREDIS_HOST','127.0.0.1')
+BDREDIS_PORT = os.environ.get('BDREDIS_PORT','6379')
+BDREDIS_DB = os.environ.get('BDREDIS_DB','0')
+
 
 # DEBUG->INFO->ERROR
 LOG_LEVEL = os.environ.get('LOG_LEVEL','DEBUG')

@@ -11,7 +11,7 @@ class PlcService:
         self.repo = repositorio
         self.logger = logger
     
-    def procesar_frame(self, id=None, payload=None):
+    def procesar_frame(self, unit_id=None, payload=None):
         """
         No importa la respuesta porque las estaciones OCEANUS no la procesan
         """
@@ -24,19 +24,19 @@ class PlcService:
         id_frame = payload[0]
 
         if id_frame == 80:
-            d_rsp = PlcPingFrameUsecase(self.logger).procesar_frame(id, payload)  
+            d_rsp = PlcPingFrameUsecase(self.logger).procesar_frame(unit_id=unit_id, payload=payload)  
 
         elif id_frame == 67:
-            d_rsp = PlcConfigFrameUsecase(self.repo, self.logger).procesar_frame(id, payload)
+            d_rsp = PlcConfigFrameUsecase(self.repo, self.logger).procesar_frame(unit_id=unit_id, payload=payload)
 
         elif id_frame == 68:
-            d_rsp = PlcDataFrameUsecase(self.repo, self.logger).procesar_frame(id, payload)
+            d_rsp = PlcDataFrameUsecase(self.repo, self.logger).procesar_frame(unit_id=unit_id, payload=payload)
 
         else:
-            self.logger.error(f"PLC id={id} error de id_frame {id_frame}")
+            self.logger.error(f"PLC unit_id={unit_id} error de id_frame {id_frame}")
             d_rsp = { 'status_code': 400 }
 
-        self.logger.debug(f"d_rsp={d_rsp}")
+        #self.logger.debug(f"d_rsp={d_rsp}")
         return d_rsp
     
 

@@ -19,7 +19,7 @@ class PlcConfigFrameUsecase:
         self.logger = logger
         self.mbk = Memblock(self.logger)
     
-    def procesar_frame(self, id=None, payload=None):
+    def procesar_frame(self, unit_id=None, payload=None):
         """
         -Leo la configuracion del PLC desde el repositorio
         -Genero un memblock con el template de la configuracion
@@ -28,19 +28,19 @@ class PlcConfigFrameUsecase:
         self.logger.debug("")
         
         # Le pido al repositorio que me de la configuracion
-        d_rsp = self.repo.leer_configuracion_plc(id)
+        d_rsp = self.repo.leer_configuracion_unidad(unit_id)
         assert isinstance(d_rsp, dict)
-        #self.logger.debug(f"id={id}, d_rsp={d_rsp}")
+        #self.logger.debug(f"unit_id={unit_id}, d_rsp={d_rsp}")
 
         if d_rsp.get('status_code',0) != 200:
             d_rsp = { 'status_code':400 }
             return d_rsp
         
         d_memblock = d_rsp.get('d_config',{}).get('MEMBLOCK',{})
-        self.logger.debug(f"id={id}, d_memblock={d_memblock}")
+        self.logger.debug(f"unit_id={unit_id}, d_memblock={d_memblock}")
 
         # El memblok de la configuracion se lo paso al mbk helper que instancie en el init.
-        self.mbk.set_plcid(id)                      # Carglo el plcid
+        self.mbk.set_plcid(unit_id)                 # Carglo el plcid
         self.mbk.set_memblock(d_memblock)           # Cargo la configuracion
 
         bytestream = self.mbk.pack_from_configmbk()  # Lo transformo en bytesting

@@ -58,7 +58,3 @@ class DlgResource(Resource):
 
         return response, status_code
     
-
-    
-
-

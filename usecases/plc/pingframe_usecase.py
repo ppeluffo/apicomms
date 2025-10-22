@@ -10,7 +10,7 @@ class PlcPingFrameUsecase:
     def __init__(self, logger):
         self.logger = logger
     
-    def procesar_frame(self, id=None, payload=None):
+    def procesar_frame(self, unit_id=None, payload=None):
         """
         El frame de ping responde igual que lo que recibió.
         """

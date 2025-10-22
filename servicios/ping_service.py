@@ -13,24 +13,12 @@ class PingService:
         """
         self.logger.debug("")
 
-        d_rsp1 =  self.repo.ping_apiredis()
-        d_rsp2 =  self.repo.ping_apidatos()
+        d_rsp_redis =  self.repo.ping_redis()
+        d_rsp_pgsql =  self.repo.ping_pgsql()
 
-        if d_rsp1.get('status_code', 0) == 200:
-            json1 = d_rsp1.get('json')
-        else:
-            json1 = {}
-
-        if d_rsp2.get('status_code', 0) == 200:
-            json2 = d_rsp2.get('json')
-        else:
-            json2 = {}
-        
         d_rsp = { 'status_code':200,
-                  'apiredis_status_code': d_rsp1['status_code'],
-                 'apiredis_params': json1,
-                 'apidatos_status_code': d_rsp2['status_code'],
-                 'apidatos_params': json2,
+                  'redis': d_rsp_redis,
+                  'pgsql': d_rsp_pgsql
                    }
         
         return d_rsp

@@ -55,7 +55,7 @@ class Memblock:
         d_payload = {}
         offset = 0
         for nombre, formato, valor in memblock:
-            fmt = formato_map[formato]
+            fmt = formato_map[formato.lower()]
             size = struct.calcsize(fmt)
             try:
                 val_unpack = struct.unpack(fmt, bytestream[offset:offset+size])[0]
@@ -80,7 +80,7 @@ class Memblock:
         """
         """
         self.logger.debug("")
-
+        #self.logger.debug(f"memblok={memblock}")
         bytestream = b''
         for nombre, formato, valor in memblock:
             fmt = formato_map[formato]

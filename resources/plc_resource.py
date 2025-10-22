@@ -41,14 +41,14 @@ class PlcResource(Resource):
         parser.add_argument('TYPE',type=str,location='args',required=True)
         args=parser.parse_args()
 
-        id = args['ID']
+        unit_id = args['ID']
         version = args['VER']
         tipo = args['TYPE']
         payload = request.get_data()
 
         self.logger.debug(f"payload={payload}")
 
-        d_rsp = self.plc_service.procesar_frame(id=id, payload=payload)
+        d_rsp = self.plc_service.procesar_frame(unit_id=unit_id, payload=payload)
         assert isinstance(d_rsp, dict)
         status_code = d_rsp.get('status_code',0)
         if status_code == 200:
@@ -71,6 +71,7 @@ class PlcResource(Resource):
 
         return response
     
+
 
     
 

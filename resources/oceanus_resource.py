@@ -27,12 +27,13 @@ class OceanusResource(Resource):
         parser.add_argument('VER',type=str,location='args',required=True)
         parser.add_argument('TYPE',type=str,location='args',required=True)
         args=parser.parse_args()
-        id = args['ID']
+        unit = args['ID']
         version = args['VER']
         tipo = args['TYPE']
-        payload = request.get_data()
 
-        _ = self.oceanus_service.procesar_frame(id=id, payload=payload)
+        payload = request.get_data()
+        
+        _ = self.oceanus_service.procesar_frame(unit=unit, payload=payload)
 
         # Las estaciones OCEANUS solo envian datos POST. No procesan respuestas
         return {}, 200

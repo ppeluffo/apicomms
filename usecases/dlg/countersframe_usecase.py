@@ -58,7 +58,7 @@ class DlgCountersFrameUsecase:
             return {'status_code':400}
 
         # 1) Le pido al repositorio que me de la configuracion
-        d_rsp = self.repo.leer_configuracion(self.dlgid)
+        d_rsp = self.repo.leer_configuracion_unidad(self.dlgid)
         assert isinstance(d_rsp, dict)
         self.logger.debug(f"id={self.dlgid}, d_rsp={d_rsp}")
         
@@ -67,7 +67,7 @@ class DlgCountersFrameUsecase:
             d_rsp = { 'status_code': 200, 'raw_response': 'CLASS=CONF_BASE&CONFIG=ERROR' }
             return d_rsp
  
-        d_conf = d_rsp
+        d_conf = d_rsp['d_config']
         if 'COUNTERS' not in d_conf.keys():
             self.logger.error(f"NO COUNTERS in keys !!. Default config.")
             d_rsp = { 'status_code': 200, 'raw_response': 'CLASS=ERROR' }
