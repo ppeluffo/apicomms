@@ -7,6 +7,7 @@ from container import Container
 from servicios.plc_service import PlcService
 import time
 from flask import current_app
+from utilidades.selective_logger import slogger
 
 class PlcResource(Resource):
 
@@ -48,11 +49,7 @@ class PlcResource(Resource):
         tipo = args['TYPE']
         payload = request.get_data()
 
-        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
-            self.logger.info(f"LOG UNIT: {current_app.config["DEBUG_ID"]}")
-
-        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
-            self.logger.info(f"payload={payload}")
+        slogger(f"payload={payload}")
 
         d_rsp = self.plc_service.procesar_frame(unit_id=unit_id, payload=payload)
         assert isinstance(d_rsp, dict)
@@ -65,8 +62,7 @@ class PlcResource(Resource):
         else:
             bytestream = b''
 
-        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
-            self.logger.info(f"bytestream={bytestream}")
+        slogger(f"bytestream={bytestream}")
 
         response = make_response(bytestream)
         response.headers['Content-type'] = 'application/binary'
@@ -74,7 +70,7 @@ class PlcResource(Resource):
         # Stats
         end = time.perf_counter()
         elapsed_time = (end - start) * 1000
-        self.logger.info(f"POST: transaction time: {elapsed_time:.2f} msecs, Accesos REDIS: {current_app.config['ACCESOS_REDIS']}")
+        self.logger.info(f"[{current_app.config['UNIT_ID']}] POST: transaction time: {elapsed_time:.2f} msecs, Accesos REDIS: {current_app.config['ACCESOS_REDIS']}")
 
         return response
     

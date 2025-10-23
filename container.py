@@ -30,7 +30,7 @@ class Container(containers.DeclarativeContainer):
     )
     
     # Logger (singleton compartido)
-    logger = providers.Singleton(configure_logger, name="api-redis")
+    logger = providers.Singleton(configure_logger, name="api-comms")
 
     # Engine y session factory BDLOCAL
     engine_pgsql = providers.Singleton(

@@ -5,6 +5,7 @@ from pymodbus.utilities import computeCRC
 from datetime import datetime
 import struct
 from flask import current_app
+from utilidades.selective_logger import slogger
 
 class PlcDataFrameUsecase:
     """
@@ -114,8 +115,7 @@ class PlcDataFrameUsecase:
         l_resposes_mbk = []
         # Esta mbk me da las respuestas a enviar. Debo completarlo
         l_respuestas_mbk = self.mbk.get_respuestas_mbk()
-        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
-            self.logger.info(f"l_respuestas_mbk={l_respuestas_mbk}")
+        slogger(f"l_respuestas_mbk={l_respuestas_mbk}")
 
         # Para no leer en c/variable las ordenes, la leo una sola vez y las borro
         d_ordenes_plc = self.helper_read_ordenesplc(unit_id)
@@ -134,8 +134,8 @@ class PlcDataFrameUsecase:
             l_resposes_mbk.append( [nombre, tipo, val ])
 
         # Tengo la lista ordenada de respuestas con los valores correspondientes.
-        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
-            self.logger.info(f"l_responses_mbk={l_resposes_mbk}")
+        slogger(f"l_responses_mbk={l_resposes_mbk}")
+
         # Serializo
         bytestream = self.mbk.pack_from_mbk(l_resposes_mbk)
         d_rsp = {'status_code': 200, 'bytestream': bytestream }
@@ -153,8 +153,7 @@ class PlcDataFrameUsecase:
         # 1) Le pido al repositorio que me de la configuracion
         d_rsp = self.repo.leer_configuracion_unidad(unit_id)
         assert isinstance(d_rsp, dict)
-        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
-            self.logger.info(f"unit_id={unit_id}, d_rsp={d_rsp}")
+        slogger(f"d_rsp={d_rsp}")
         
         if d_rsp.get('status_code',0) != 200:
             d_rsp = { 'status_code':400 }

@@ -26,7 +26,6 @@ class DlgService:
         self.logger = logger
     
     def read_debug_id(self):
-        #self.logger.debug("")
         return self.repo.read_debug_id()
     
     def procesar_frame(self, d_params=None):

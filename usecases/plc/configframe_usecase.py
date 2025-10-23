@@ -5,6 +5,7 @@ from utilidades.plc_memblocks import Memblock
 from pymodbus.utilities import computeCRC
 import struct
 from flask import current_app
+from utilidades.selective_logger import slogger
 
 class PlcConfigFrameUsecase:
     """
@@ -31,8 +32,7 @@ class PlcConfigFrameUsecase:
         # Le pido al repositorio que me de la configuracion
         d_rsp = self.repo.leer_configuracion_unidad(unit_id)
         assert isinstance(d_rsp, dict)
-        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
-            self.logger.info(f"unit_id={unit_id}, d_rsp={d_rsp}")
+        slogger(f"d_rsp={d_rsp}")
 
         if d_rsp.get('status_code',0) != 200:
             d_rsp = { 'status_code':400 }

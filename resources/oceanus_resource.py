@@ -6,7 +6,6 @@ from container import Container
 import datetime as dt
 from servicios.oceanus_service import OceanusService
 
-
 class OceanusResource(Resource):
 
     @inject

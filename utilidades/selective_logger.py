@@ -13,5 +13,5 @@ def slogger(s):
     #caller = f"{frame.f_globals['__name__']}.{frame.f_code.co_name}"
     caller = f"{frame.f_code.co_name}"
 
-    if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
-        logger.info(f"[{caller}] ID={current_app.config['UNIT_ID']}: {s}")
+    if logger.level < 20 or ( current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"] ):
+        logger.info(f"[{caller}] [{current_app.config['UNIT_ID']}]: {s}")

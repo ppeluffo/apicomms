@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from flask import current_app
+from utilidades.selective_logger import slogger
 
 class DlgDataFrameUsecase:
     """
@@ -40,8 +41,7 @@ class DlgDataFrameUsecase:
         _ = d_dataline.pop('VER',None)
         _ = d_dataline.pop('CLASS',None)
 
-        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
-            self.logger.info(f"ID={current_app.config['UNIT_ID']}: D_DATALINE={d_dataline}")
+        slogger(f"D_DATALINE={d_dataline}")
 
         d_rsp = self.repo.save_dataline(unit=self.dlgid, unit_type=unit_type, d_dataline=d_dataline)
         

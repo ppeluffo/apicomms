@@ -7,6 +7,7 @@ from container import Container
 from servicios.dlg_service import DlgService
 import time
 from flask import current_app
+from utilidades.selective_logger import slogger
 
 class DlgResource(Resource):
 
@@ -40,8 +41,7 @@ class DlgResource(Resource):
         d_params = request.args.to_dict()  
         unit_id = d_params['ID']
         current_app.config["UNIT_ID"] = unit_id   
-        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
-            self.logger.info(f"d_params={d_params}")
+        slogger(f"d_params={d_params}")
 
         d_rsp = self.dlg_service.procesar_frame(d_params)
         
@@ -52,15 +52,14 @@ class DlgResource(Resource):
         else:
             raw_response = ""
             
-        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
-            self.logger.info(f"raw_response->{raw_response}")
+        slogger(f"raw_response->{raw_response}")
 
         response = (f'<html>{raw_response}</html>')
         
         # Stats
         end = time.perf_counter()
         elapsed_time = (end - start) * 1000
-        self.logger.info(f"GET: transaction time: {elapsed_time:.2f} msecs, Accesos REDIS: {current_app.config['ACCESOS_REDIS']}")
+        self.logger.info(f"[{current_app.config['UNIT_ID']}] GET: transaction time: {elapsed_time:.2f} msecs, Accesos REDIS: {current_app.config['ACCESOS_REDIS']}")
 
         return response, status_code
     

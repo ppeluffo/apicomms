@@ -3,6 +3,7 @@
 from utilidades.str2int import str2int
 from utilidades.uhash import u_hash
 from flask import current_app
+from utilidades.selective_logger import slogger
 
 class DlgFlowControlFrameUsecase:
     """
@@ -101,8 +102,7 @@ class DlgFlowControlFrameUsecase:
         # 1) Le pido al repositorio que me de la configuracion
         d_rsp = self.repo.leer_configuracion_unidad(self.dlgid)
         assert isinstance(d_rsp, dict)
-        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
-            self.logger.info(f"ID={current_app.config['UNIT_ID']}: d_rsp={d_rsp}")
+        slogger(f"d_rsp={d_rsp}")
         
         if d_rsp.get('status_code',0) != 200:
             self.logger.error(f"CONFIG ERROR")
@@ -118,8 +118,7 @@ class DlgFlowControlFrameUsecase:
         # 2) Calculo el hash de la configuracion de la BD.
         bd_hash = self.get_flowcontrol_hash_from_config(d_conf)
         fx_hash = int(d_params.get('HASH',0), 16)
-        if current_app.config["UNIT_ID"] == current_app.config["DEBUG_ID"]:
-            self.logger.info(f"ID={current_app.config["UNIT_ID"]}: BD_hash={bd_hash}, UI_hash={fx_hash}")
+        slogger(f"BD_hash={bd_hash}, UI_hash={fx_hash}")
 
         if bd_hash == fx_hash:
             raw_response = 'CLASS=CONF_FLOWCONTROL&CONFIG=OK'
